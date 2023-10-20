@@ -27,7 +27,7 @@ s3 = boto3.client(
     aws_secret_access_key=aws_secret_access_key
 )
 
-conn = connect()
+#conn = connect()
 
 @app.post("/upload_file")
 async def upload_file(file: UploadFile = File(...)):
