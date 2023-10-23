@@ -27,17 +27,28 @@ s3 = boto3.client(
     aws_secret_access_key=aws_secret_access_key
 )
 
-#conn = connect()
+conn = connect()
 
 @app.post("/upload_file")
 async def upload_file(file: UploadFile = File(...)):
+
+    query="insert into file (name,extension) values (%s,%s)"
+    print(conn)
+    print(conn.server_host)
     try:
+        
         file_extension = file.filename.split(".")[-1]
-        file_name = f'{uuid4()}.{file_extension}'
-        
-        s3.upload_fileobj(file.file, aws_bucket_name, file_name)
-        return {'message': 'Archivo subido exitosamente', 'file_name': file_name}
-        
+        s3.upload_fileobj(file.file, aws_bucket_name, file.filename)
+
+        if(conn.is_connected):
+            cursor = conn.cursor()
+            cursor.execute("CREATE TABLE IF NOT EXISTS file(id INT AUTO_INCREMENT PRIMARY KEY, name varchar(50), extension varchar(50))")
+            values = (file.filename,file_extension)
+            cursor.execute(query,values)
+            conn.commit()
+            return {'message': 'Archivo subido exitosamente', 'file_name': file.filename}
+        else:
+            print("no se conecto bobo")
     except NoCredentialsError:
         raise HTTPException(
             status_code=500,
@@ -48,6 +59,8 @@ async def upload_file(file: UploadFile = File(...)):
             status_code=500,
             detail=f'Error al subir el archivo: {str(e)}'
         )
+    finally:
+        conn.close()
 
 @app.get("/list_files")
 async def list_files():
